@@ -1,0 +1,73 @@
+-
+  skip: True
+  env: FrozenLake-v1
+  random_seed: 1
+  num_episodes: 50000
+  num_play_episodes: 10
+
+  model: QTableModel
+  algo: Q_LEARN
+
+  model_options:
+
+  algo_options:
+    gamma: 0.95 #[0.93, 0.96, 0.01] # 0.97  # decay rate of past observations
+    alpha: 0.9 # [0.87, 0.91, 0.01] # learning rate in the Q value
+    eps: 1.0
+    eps_decay_factor: 0.999 #[0.994, 0.997, 0.001] # 0.997
+
+
+-
+  skip: True
+  env: FrozenLake8x8-v1
+  random_seed: 1
+  num_episodes: 50000
+  num_play_episodes: 10
+
+  model: QTableModel
+  algo: Q_LEARN
+
+  model_options:
+
+  algo_options:
+    gamma: 0.99  # decay rate of past observations
+    alpha: 0.8   # learning rate in the Q value
+    eps: 1.0
+    eps_decay_factor: 0.999
+
+
+-
+  skip: False
+  env: Blackjack-v1
+  random_seed: 1
+  num_episodes: 500000
+  num_play_episodes: 10
+
+  model: QTableModel
+  algo: Q_LEARN
+
+  model_options:
+
+  algo_options:
+    gamma: 0.91 #[0.85, 0.95, 0.01]  # decay rate of past observations
+    alpha: 0.8 #[0.2, 0.9, 0.1]   # learning rate in the Q value
+    eps: 1.0
+    eps_decay_factor: 0.9999
+
+
+-
+  skip: True
+  env: CartPole-v1
+  random_seed: 1
+  num_episodes: 500
+  num_play_episodes: 5
+
+  model: CartPoleModel
+  algo: REINFORCE
+
+  model_options:
+    learning_rate: 0.01  # learning rate in deep learning
+
+  algo_options:
+    gamma: 0.99  # decay rate of past observations
+    alpha: 1e-4   # learning rate in the Q value
