@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import numpy as np
 
 from keras.optimizer_v2.adam import Adam
@@ -86,4 +88,25 @@ class QTableModel(BaseModel):
     def fit(self, x, y):
         index = self._state2index(x)
         history = self.model[index] = y
+        return history
+
+
+class QDictModel(BaseModel):
+    def __init__(self, model_options):
+        super().__init__()
+        self.observation_space = model_options['observation_space']
+        self.action_size = model_options['action_size']
+
+        self.model = self._create()
+
+    def _create(self):
+        # create a Q dictionary
+        model = defaultdict(lambda: np.zeros(self.action_size))
+        return model
+
+    def predict(self, state):
+        return np.copy(self.model[state])
+
+    def fit(self, x, y):
+        history = self.model[x] = y
         return history

@@ -125,7 +125,7 @@ def main():
     with open("Playground.yaml", "r") as f:
         config = yaml.load(f)
     for cfg in config:
-        if cfg['skip']: continue
+        if cfg.get('skip', False): continue
 
         num_episodes = cfg['num_episodes']
         prints_per_run = cfg.get('prints_per_run', 10)
@@ -134,6 +134,8 @@ def main():
         random_seed = cfg['random_seed']
         np.random.seed(random_seed)
         tf.random.set_seed(random_seed)
+
+        print(f'=== Environment: {cfg["env"]} ===')
 
         # set the env
         env = gym.make(cfg['env'])  # env to import
@@ -197,18 +199,20 @@ def main():
 
             # algo.random(cfg['num_episodes'])
             avg_reward = algo.train(num_episodes, prints_per_run)
-            print(f'{avg_reward:.3f}, {p}')
+            if len(params) > 1:
+                print(f'{avg_reward:.3f}, {p}')
 
             if avg_reward > winning_reward:
                 winning_reward = avg_reward
                 winning_params = p
 
         # play back if not in the hyper params optimization mode
-        if len(params) == 1:
-            algo.play(cfg['num_play_episodes'], True)
-            rewards = algo.play(cfg['num_play_episodes'])
-        else:
+        if len(params) > 1:
             print(f'Winner: {winning_reward:.3f}, {winning_params}')
+        else:
+            _, win_rate_random = algo.play(cfg['num_play_episodes'], True)
+            _, win_rate = algo.play(cfg['num_play_episodes'])
+            print(f'Win rate: Random: {win_rate_random}. Trained: {win_rate}')
 
     # CartPole()
     # FrozenLake()

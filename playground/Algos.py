@@ -1,4 +1,6 @@
 import time
+from collections import defaultdict
+
 import numpy as np
 
 
@@ -20,40 +22,56 @@ class BaseAlgo:
     def get_action(self, state, env=None, eps=0.0):
         raise NotImplementedError
 
+    def get_action_epsilon_greedy(self, state, env=None, eps=0.0):
+        '''samples the next action based on the policy probability distribution of the actions'''
+
+        # get action expected values
+        action_expected_values = self.model.predict(state)
+
+        # sample action
+        if np.random.random() < eps:
+            action = env.action_space.sample()
+        else:
+            action = np.argmax(action_expected_values)
+
+        return action, action_expected_values
+
     def train(self, num_episodes, prints_per_run):
         raise NotImplementedError
 
     def play(self, num_episodes, is_random=False):
         env = self.env
-        total_rewards = np.zeros(num_episodes)
+        rewards = np.zeros(num_episodes)
+        wins = 0
 
         for episode in range(num_episodes):
             # each episode is a new game env
             state = env.reset()
-            done = False
             episode_reward = 0  # record episode reward
 
+            done = False
             while not done:
-                # play an action and record the game state & reward per episode
                 if is_random:
-                    action, prob = self.get_action(state, env, 1)
+                    action, _ = self.get_action(state, env, 1)
                 else:
-                    action, prob = self.get_action(state)
-                next_state, reward, done, _ = env.step(action)
-                state = next_state
+                    action, _ = self.get_action(state)
+                state, reward, done, _ = env.step(action)
+
                 episode_reward += reward
+                if reward > 0:
+                    wins += 1
 
                 # env.render()
 
-            total_rewards[episode] = episode_reward
+            rewards[episode] = episode_reward
 
-            if is_random:
-                title = 'Random cycle'
-            else:
-                title = 'Playback cycle'
-            print(f"{title} {episode}. Reward: {episode_reward}")
+            # if is_random:
+            #     title = 'Random cycle'
+            # else:
+            #     title = 'Playback cycle'
+            # print(f"{title} {episode}. Reward: {episode_reward}")
 
-        return total_rewards
+        return rewards, wins / num_episodes
 
 
 class REINFORCE(BaseAlgo):
@@ -63,20 +81,21 @@ class REINFORCE(BaseAlgo):
         self.gamma = float(algo_options['gamma'])  # decay rate of past observations
         self.alpha = float(algo_options['alpha'])  # learning rate in the policy gradient
 
-    def get_action(self, state):
+    def get_action(self, state, env=None, eps=0.0):
         '''samples the next action based on the policy probability distribution of the actions'''
 
         # transform state
         state = state.reshape([1, state.shape[0]])
         # get action probably
-        # t0 = time.time()
         action_probability_distribution = self.model.predict(state).flatten()
-        # print(f"{(time.time() - t0):.3f}")
         # norm action probability distribution
         action_probability_distribution /= np.sum(action_probability_distribution)
 
         # sample action
-        action = np.random.choice(self.model.action_size, 1, p=action_probability_distribution)[0]
+        if np.random.random() < eps:
+            action = env.action_space.sample()
+        else:
+            action = np.random.choice(self.model.action_size, 1, p=action_probability_distribution)[0]
 
         return action, action_probability_distribution
 
@@ -124,6 +143,8 @@ class REINFORCE(BaseAlgo):
         '''train the model
             num_episodes - number of training iterations '''
 
+        print_frequency = int(num_episodes / prints_per_run)
+
         self.total_rewards = np.zeros(num_episodes)
 
         for episode in range(num_episodes):
@@ -162,11 +183,14 @@ class REINFORCE(BaseAlgo):
             self.total_rewards[episode] = episode_reward
 
             t2 = time.time()
-            print(f"Training cycle {episode}. Reward: {episode_reward:3.0f}. Loss: {history: .3f} "
-                  f"({(t2 - t0):.3f} sec"
-                  # f", {t_action:.3f} sec, {t_step:.3f} sec, {t_store:.3f} sec, {(t2 - t1):.3f} sec"
-                  f")"
-                  )
+            if episode % print_frequency == 0 and episode != 0:
+                print(f"Training cycle {episode}. Reward: {episode_reward:3.0f}. Loss: {history: .3f} "
+                      f"({(t2 - t0):.3f} sec"
+                      # f", {t_action:.3f} sec, {t_step:.3f} sec, {t_store:.3f} sec, {(t2 - t1):.3f} sec"
+                      f")"
+                      )
+
+        return np.sum(self.total_rewards)/len(self.total_rewards)
 
 
 class Q_LEARN(BaseAlgo):
@@ -180,18 +204,7 @@ class Q_LEARN(BaseAlgo):
         self.eps_decay_factor = float(algo_options['eps_decay_factor'])
 
     def get_action(self, state, env=None, eps=0.0):
-        '''samples the next action based on the policy probability distribution of the actions'''
-
-        # get action probably
-        action_probability_distribution = self.model.predict(state)
-
-        # sample action
-        if np.random.random() < eps:
-            action = env.action_space.sample()
-        else:
-            action = np.argmax(action_probability_distribution)
-
-        return action, action_probability_distribution
+        return self.get_action_epsilon_greedy(state, env, eps)
 
     def random(self, episodes):
         for episode in range(episodes):
@@ -215,29 +228,91 @@ class Q_LEARN(BaseAlgo):
 
         for episode in range(num_episodes):
             # each episode is a new game env
-            done = False
             episode_reward = 0  # record episode reward
             eps *= self.eps_decay_factor
 
             state = self.env.reset()
-            action, prob = self.get_action(state, self.env, eps)
+            done = False
             while not done:
+                action, expected_values = self.get_action(state, self.env, eps)
                 new_state, reward, done, _ = self.env.step(action)
-                new_action, new_prob = self.get_action(new_state)
 
-                q = prob[action]
-                q_next = q + self.alpha * (reward + self.gamma * np.max(new_prob) - q)
+                # get discounted future value
+                _, new_prob = self.get_action(new_state)
+                G = reward + self.gamma * np.max(new_prob)
 
-                prob_next = np.copy(prob)
-                prob_next[action] = q_next
-                if q_next < 0:
-                    prob_next -= q_next
-                self.model.fit(state, prob_next)
+                q = expected_values[action]
+                q_next = q + self.alpha * (G - q)
 
-                episode_reward += reward
+                v_next = np.copy(expected_values)
+                v_next[action] = q_next
+
+                self.model.fit(state, v_next)
 
                 state = new_state
-                action, prob = self.get_action(state, self.env, eps)
+                episode_reward += reward
+
+            self.total_rewards[episode] = episode_reward
+            # if episode_reward > 0:
+            #     print(f'======{episode}')
+
+            if episode % print_frequency == 0 and episode != 0:
+                print(f"Training cycle {episode}. Average reward: {np.sum(self.total_rewards)/episode:1.6f}.")
+
+        return np.sum(self.total_rewards)/len(self.total_rewards)
+
+
+class Q_LEARN_BATCH(BaseAlgo):
+    def __init__(self, env, model, algo_options):
+        super().__init__(env, model)
+
+        self.gamma = float(algo_options['gamma'])  # decay rate of past observations
+        self.alpha = float(algo_options['alpha'])
+
+        self.eps = float(algo_options['eps'])
+        self.eps_decay_factor = float(algo_options['eps_decay_factor'])
+
+    def get_action(self, state, env=None, eps=0.0):
+        return self.get_action_epsilon_greedy(state, env, eps)
+
+    def train(self, num_episodes, prints_per_run):
+        '''train the model
+            num_episodes - number of training iterations '''
+
+        print_frequency = int(num_episodes / prints_per_run)
+
+        self.total_rewards = np.zeros(num_episodes)
+        state_count = defaultdict(int)
+
+        for episode in range(num_episodes):
+            state = self.env.reset()
+
+            # run the simulation and store the results
+            episode_reward = 0
+            episode_data = []
+            done = False
+            while not done:
+                state_count[state] += 1
+                eps = self.eps * self.eps_decay_factor ** state_count[state]
+
+                action, expected_values = self.get_action(state, self.env, eps)
+                new_state, reward, done, _ = self.env.step(action)
+
+                episode_data.append((state, action, reward, expected_values))
+                state = new_state
+                episode_reward += reward
+
+            G = 0   # discounted expected value
+            for (s, a, r, v) in reversed(episode_data):
+                G = r + self.gamma * G
+
+                q = v[a]
+                q_next = q + self.alpha * (G - q)
+
+                v_next = np.copy(v)
+                v_next[a] = q_next
+
+                self.model.fit(s, v_next)
 
             self.total_rewards[episode] = episode_reward
             # if episode_reward > 0:
