@@ -1,6 +1,6 @@
 # FrozenLake-v1
 -
-  skip: True
+#  skip: True
   env: FrozenLake-v1
   random_seed: 1
   num_episodes: 500000
