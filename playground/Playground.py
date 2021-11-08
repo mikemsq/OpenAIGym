@@ -5,7 +5,6 @@ from datetime import datetime
 import yaml
 
 import numpy as np
-import tensorflow as tf
 import gym as gym
 
 import Models
@@ -126,21 +125,17 @@ def main():
     with open("Playground.yaml", "r") as f:
         config = yaml.safe_load(f)
     for cfg in config:
-        if cfg.get('skip', False): continue
+        if cfg.get('skip', False):
+            continue
 
         num_episodes = cfg['num_episodes']
         prints_per_run = cfg.get('prints_per_run', 10)
-
-        # init the randomizers
-        random_seed = cfg['random_seed']
-        np.random.seed(random_seed)
-        tf.random.set_seed(random_seed)
 
         log(f'=== Environment: {cfg["env"]} ===')
 
         # set the env
         env = gym.make(cfg['env'])  # env to import
-        env.seed(random_seed)
+        env.seed(1)
         env.reset()  # reset env
 
         # read options from the config

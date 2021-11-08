@@ -2,7 +2,6 @@
 -
 #  skip: True
   env: FrozenLake-v1
-  random_seed: 1
   num_episodes: 500000
   num_play_episodes: 1000
 
@@ -24,7 +23,6 @@
 -
   skip: True
   env: FrozenLake8x8-v1
-  random_seed: 1
   num_episodes: 100000
   num_play_episodes: 1000
 
@@ -46,7 +44,6 @@
 -
   skip: True
   env: Blackjack-v1
-  random_seed: 1
   num_episodes: 1000000
   num_play_episodes: 10000
 
@@ -67,7 +64,6 @@
 -
   skip: True
   env: Blackjack-v1
-  random_seed: 1
   num_episodes: 1000000
   num_play_episodes: 10000
 
@@ -87,7 +83,6 @@
 -
   skip: True
   env: CartPole-v1
-  random_seed: 1
   num_episodes: 500
   num_play_episodes: 5
 

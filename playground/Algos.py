@@ -5,10 +5,12 @@ import numpy as np
 
 
 class BaseAlgo:
-    def __init__(self, env, model):
+    def __init__(self, env, model, algo_options):
         self.env = env
         self.model = model
         self.total_rewards = []
+
+        self.random_seed = algo_options.get('random_seed', 1)
 
     def hot_encode_actions(self, actions):
         '''encoding the actions into a binary list'''
@@ -76,7 +78,13 @@ class BaseAlgo:
 
 class REINFORCE(BaseAlgo):
     def __init__(self, env, model, algo_options):
-        super().__init__(env, model)
+        import tensorflow as tf
+
+        super().__init__(env, model, algo_options)
+
+        # init the randomizers
+        np.random.seed(self.random_seed)
+        tf.random.set_seed(self.random_seed)
 
         self.gamma = float(algo_options['gamma'])  # decay rate of past observations
         self.alpha = float(algo_options['alpha'])  # learning rate in the policy gradient
@@ -195,7 +203,10 @@ class REINFORCE(BaseAlgo):
 
 class Q_LEARN(BaseAlgo):
     def __init__(self, env, model, algo_options):
-        super().__init__(env, model)
+        super().__init__(env, model, algo_options)
+
+        # init the randomizers
+        np.random.seed(self.random_seed)
 
         self.gamma = float(algo_options['gamma'])  # decay rate of past observations
         self.alpha = float(algo_options['alpha'])
@@ -264,7 +275,10 @@ class Q_LEARN(BaseAlgo):
 
 class Q_LEARN_BATCH(BaseAlgo):
     def __init__(self, env, model, algo_options):
-        super().__init__(env, model)
+        super().__init__(env, model, algo_options)
+
+        # init the randomizers
+        np.random.seed(self.random_seed)
 
         self.gamma = float(algo_options['gamma'])  # decay rate of past observations
         self.alpha = float(algo_options['alpha'])
@@ -276,8 +290,8 @@ class Q_LEARN_BATCH(BaseAlgo):
         return self.get_action_epsilon_greedy(state, env, eps)
 
     def train(self, num_episodes, prints_per_run):
-        '''train the model
-            num_episodes - number of training iterations '''
+        """train the model
+            num_episodes - number of training iterations """
 
         print_frequency = int(num_episodes / prints_per_run)
 
