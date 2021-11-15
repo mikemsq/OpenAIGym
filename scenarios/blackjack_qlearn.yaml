@@ -1,0 +1,14 @@
+env: Blackjack-v1
+num_episodes: 1000000
+num_play_episodes: 10000
+
+# model: QTable
+model: QDictionary
+model_options:
+
+algo: Q_LEARN
+algo_options:
+  gamma: 0.91 #[0.85, 0.95, 0.01]  # decay rate of past observations
+  alpha: 0.8 #[0.2, 0.9, 0.1]   # learning rate in the Q value
+  eps: 1.0
+  eps_decay_factor: 0.9999

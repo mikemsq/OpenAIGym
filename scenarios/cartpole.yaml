@@ -1,0 +1,12 @@
+env: CartPole-v1
+num_episodes: 800
+num_play_episodes: 50
+
+model: NN_24_12_softmax
+model_options:
+  learning_rate: 0.01  # learning rate in deep learning
+
+algo: REINFORCE
+algo_options:
+  gamma: 0.99  # decay rate of past observations
+  alpha: 1e-4   # learning rate in the Q value
