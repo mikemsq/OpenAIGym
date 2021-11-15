@@ -10,7 +10,7 @@ algo: Q_LEARN_BATCH
 model_options:
 
 algo_options:
-  gamma: [0.93, 0.97, 0.02] # 0.95  # decay rate of past observations
-  alpha: [0.88, 0.92, 0.02] # 0.9   # learning rate in the Q value
+  gamma: 0.6 # [0.5, 0.7, 0.05]  # decay rate of past observations
+  alpha:  0.02 # [0.0, 0.06, 0.01] # 0.06   # learning rate in the Q value
   eps: 1.0
-  eps_decay_factor: 0.999
+  eps_decay_factor: 0.9999

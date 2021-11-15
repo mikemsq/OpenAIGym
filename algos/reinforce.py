@@ -22,7 +22,7 @@ class REINFORCE(BaseAlgo):
         '''samples the next action based on the policy probability distribution of the actions'''
 
         # get action probability
-        action_probability_distribution = self.model.predict(state).flatten()
+        action_probability_distribution = self.model.predict(state)
         # norm action probability distribution
         action_probability_distribution /= np.sum(action_probability_distribution)
 
@@ -74,7 +74,7 @@ class REINFORCE(BaseAlgo):
 
         return history
 
-    def train(self, num_episodes, prints_per_run):
+    def train(self, num_episodes, prints_per_run, num_validation_episodes):
         '''train the model
             num_episodes - number of training iterations '''
 
@@ -124,5 +124,6 @@ class REINFORCE(BaseAlgo):
                       # f", {t_action:.3f} sec, {t_step:.3f} sec, {t_store:.3f} sec, {(t2 - t1):.3f} sec"
                       f")"
                       )
+                print(f'Validation avg reward: {self.play(num_validation_episodes)}')
 
         return np.sum(self.total_rewards)/len(self.total_rewards)

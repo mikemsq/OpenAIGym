@@ -34,7 +34,7 @@ class NN_24_12_softmax(BaseModel):
 
     def predict(self, state):
         state_array = np.asarray(state).reshape(1, -1)
-        return self.model(state_array).numpy()
+        return self.model(state_array).numpy().flatten()
 
     def fit(self, x, y):
         x_array = np.asarray(x)

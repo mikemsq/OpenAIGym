@@ -16,6 +16,8 @@ def main(scenario_file_name):
     prints_per_run = scenario.get('prints_per_run', 10)
 
     log(f'=== Environment: {scenario["env"]} ===')
+    log(f'=== Model: {scenario["model"]} ===')
+    log(f'=== Algo: {scenario["algo"]} ===')
 
     # set the env
     env = gym.make(scenario['env'])  # env to import
@@ -79,8 +81,13 @@ def main(scenario_file_name):
         model = model_class(p[0])
         algo = algo_class(env, model, p[1])
 
+        if len(params) == 1:
+            avg_reward_random = algo.play(scenario['num_play_episodes'], True)
+            avg_reward = algo.play(scenario['num_play_episodes'])
+            log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
+
         # algo.random(scenario['num_episodes'])
-        avg_reward = algo.train(num_episodes, prints_per_run)
+        avg_reward = algo.train(num_episodes, prints_per_run, scenario['num_play_episodes'])
         if len(params) > 1:
             log(f'{avg_reward:.3f}, {p}')
 
@@ -92,9 +99,9 @@ def main(scenario_file_name):
     if len(params) > 1:
         log(f'Winner: {winning_reward:.3f}, {winning_params}')
     else:
-        _, win_rate_random = algo.play(scenario['num_play_episodes'], True)
-        _, win_rate = algo.play(scenario['num_play_episodes'])
-        log(f'Win rate: Random: {win_rate_random}. Trained: {win_rate}')
+        avg_reward_random = algo.play(scenario['num_play_episodes'], True)
+        avg_reward = algo.play(scenario['num_play_episodes'])
+        log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
 
 
 def find_class(dir_name, class_name):

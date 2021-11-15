@@ -35,19 +35,18 @@ class BaseAlgo:
 
         return action, action_expected_values
 
-    def train(self, num_episodes, prints_per_run):
+    def train(self, num_episodes, prints_per_run, num_validation_episodes):
         raise NotImplementedError
 
     def play(self, num_episodes, is_random=False):
         env = self.env
-        rewards = np.zeros(num_episodes)
-        wins = 0
+        rewards = []
 
         for episode in range(num_episodes):
             # each episode is a new game env
             state = env.reset()
-            episode_reward = 0  # record episode reward
 
+            episode_reward = 0  # record episode reward
             done = False
             while not done:
                 if is_random:
@@ -55,19 +54,16 @@ class BaseAlgo:
                 else:
                     action, _ = self.get_action(state)
                 state, reward, done, _ = env.step(action)
-
                 episode_reward += reward
-                if reward > 0:
-                    wins += 1
 
                 # env.render()
 
-            rewards[episode] = episode_reward
+            rewards.append(episode_reward)
 
             # if is_random:
             #     title = 'Random cycle'
             # else:
             #     title = 'Playback cycle'
-            # print(f"{title} {episode}. Reward: {episode_reward}")
+            # print(f"{title} {episode}. Reward: {reward}")
 
-        return rewards, wins / num_episodes
+        return np.mean(rewards)
