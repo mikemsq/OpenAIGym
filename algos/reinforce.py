@@ -80,7 +80,7 @@ class REINFORCE(BaseAlgo):
 
         print_frequency = int(num_episodes / prints_per_run)
 
-        self.total_rewards = np.zeros(num_episodes)
+        rewards = np.zeros(num_episodes)
 
         for episode in range(num_episodes):
             # each episode is a new game env
@@ -115,7 +115,7 @@ class REINFORCE(BaseAlgo):
 
             t1 = time.time()
             history = self.update_policy(states, actions, probs, rewards)
-            self.total_rewards[episode] = episode_reward
+            rewards[episode] = episode_reward
 
             t2 = time.time()
             if episode % print_frequency == 0 and episode != 0:
@@ -126,4 +126,4 @@ class REINFORCE(BaseAlgo):
                       )
                 print(f'Validation avg reward: {self.play(num_validation_episodes)}')
 
-        return np.sum(self.total_rewards)/len(self.total_rewards)
+        return rewards

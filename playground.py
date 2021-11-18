@@ -1,10 +1,9 @@
 import copy
 import sys
 from datetime import datetime
-
 import yaml
-
 import numpy as np
+import matplotlib.pyplot as plt
 import gym as gym
 
 
@@ -82,14 +81,17 @@ def main(scenario_file_name):
         algo = algo_class(env, model, p[1])
 
         if len(params) == 1:
-            avg_reward_random = algo.play(scenario['num_play_episodes'], True)
-            avg_reward = algo.play(scenario['num_play_episodes'])
+            avg_reward_random = np.mean(algo.play(scenario['num_play_episodes'], True))
+            avg_reward = np.mean(algo.play(scenario['num_play_episodes']))
             log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
 
         # algo.random(scenario['num_episodes'])
-        avg_reward = algo.train(num_episodes, prints_per_run, scenario['num_play_episodes'])
+        rewards = algo.train(num_episodes, prints_per_run, scenario['num_play_episodes'])
+        avg_reward = np.mean(rewards)
         if len(params) > 1:
             log(f'{avg_reward:.3f}, {p}')
+        else:
+            plot(rewards, 'train', algo)
 
         if avg_reward > winning_reward:
             winning_reward = avg_reward
@@ -99,8 +101,14 @@ def main(scenario_file_name):
     if len(params) > 1:
         log(f'Winner: {winning_reward:.3f}, {winning_params}')
     else:
-        avg_reward_random = algo.play(scenario['num_play_episodes'], True)
-        avg_reward = algo.play(scenario['num_play_episodes'])
+        rewards_random = algo.play(scenario['num_play_episodes'], True)
+        rewards = algo.play(scenario['num_play_episodes'])
+
+        plot(rewards_random, 'random', algo)
+        plot(rewards, 'result', algo)
+
+        avg_reward_random = np.mean(rewards_random)
+        avg_reward = np.mean(rewards)
         log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
 
 
@@ -112,6 +120,33 @@ def find_class(dir_name, class_name):
 
 def log(s):
     print(f'{datetime.now()}: {s}')
+
+
+def plot(data, prefix, algo):
+    W = 20
+    H = 10
+    DPI = 100
+    plt.rcParams['figure.figsize'] = (W, H)
+    plt.rcParams['figure.dpi'] = DPI
+
+    data_array = np.asarray(data)
+    plot_data_average = data_array.cumsum() / (np.arange(data_array.size) + 1)
+
+    cumsum = np.cumsum(np.insert(data_array, 0, 0))
+    N = int((data_array.size + 1) * 10 / (W * DPI)) # one data point per 10 pixels
+    plot_data_moving_average = (cumsum[N:] - cumsum[:-N]) / float(N)
+
+    plt.plot(plot_data_moving_average)
+    plt.plot(plot_data_average)
+
+    filename = f'log/' \
+               f'{prefix}_' \
+               f'{algo.env.spec.id}_' \
+               f'{algo.__class__.__name__}_' \
+               f'{algo.model.__class__.__name__}_' \
+               f'{datetime.now().strftime("%Y%m%d-%H%M%S")}.png'
+    plt.savefig(filename)
+    plt.close()
 
 
 if __name__ == "__main__":

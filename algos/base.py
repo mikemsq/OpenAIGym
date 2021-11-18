@@ -66,4 +66,4 @@ class BaseAlgo:
             #     title = 'Playback cycle'
             # print(f"{title} {episode}. Reward: {reward}")
 
-        return np.mean(rewards)
+        return rewards

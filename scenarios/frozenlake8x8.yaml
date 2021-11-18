@@ -1,5 +1,5 @@
 env: FrozenLake8x8-v1
-num_episodes: 100000
+num_episodes: 1000000
 num_play_episodes: 1000
 
 #  model: QTable

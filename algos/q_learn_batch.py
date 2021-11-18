@@ -26,7 +26,7 @@ class Q_LEARN_BATCH(BaseAlgo):
 
         print_frequency = int(num_episodes / prints_per_run)
 
-        self.total_rewards = []
+        rewards = []
         state_count = defaultdict(int)
 
         for episode in range(num_episodes):
@@ -47,7 +47,7 @@ class Q_LEARN_BATCH(BaseAlgo):
                 episode_data.append((state, action, reward, expected_values))
                 state = new_state
 
-            self.total_rewards.append(episode_reward)
+            rewards.append(episode_reward)
 
             # compute new expected values
             G = 0   # discounted expected value
@@ -69,7 +69,7 @@ class Q_LEARN_BATCH(BaseAlgo):
             self.model.fit(train_x, train_y)
 
             if episode % print_frequency == 0 and episode != 0:
-                print(f'Training cycle {episode}. Average reward: {np.mean(self.total_rewards):1.6f}.')
-                print(f'Validation avg reward: {self.play(num_validation_episodes)}')
+                print(f'Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}.')
+                print(f'Validation avg reward: {np.mean(self.play(num_validation_episodes))}')
 
-        return np.mean(self.total_rewards)
+        return rewards

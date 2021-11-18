@@ -37,7 +37,7 @@ class Q_LEARN(BaseAlgo):
 
         print_frequency = int(num_episodes / prints_per_run)
 
-        self.total_rewards = []
+        rewards = []
         state_count = defaultdict(int)
 
         for episode in range(num_episodes):
@@ -67,12 +67,12 @@ class Q_LEARN(BaseAlgo):
 
                 state = new_state
 
-            self.total_rewards.append(episode_reward)
+            rewards.append(episode_reward)
             # if episode_reward > 0:
             #     print(f'======{episode}')
 
             if episode % print_frequency == 0 and episode != 0:
-                print(f"Training cycle {episode}. Average reward: {np.mean(self.total_rewards):1.6f}.")
+                print(f"Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}.")
                 print(f'Validation avg reward: {self.play(num_validation_episodes)}')
 
-        return np.mean(self.total_rewards)
+        return rewards
