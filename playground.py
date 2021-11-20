@@ -1,10 +1,25 @@
 import copy
+import multiprocessing
+import os
 import sys
 from datetime import datetime
 import yaml
 import numpy as np
 import matplotlib.pyplot as plt
 import gym as gym
+
+
+# define a function to perform training
+def _job(job_params):
+    orig_params = job_params[0]
+    model_class = job_params[1]
+    algo_class = job_params[2]
+    env = job_params[3]
+    model = model_class(orig_params[0])
+    algo = algo_class(env, model, orig_params[1])
+    args = job_params[4:]
+    training_rewards = algo.train(*args)
+    return orig_params, training_rewards
 
 
 def main(scenario_file_name):
@@ -45,20 +60,20 @@ def main(scenario_file_name):
     ]
     i = 0
     while i < len(params):
-        p = params[i]
+        pool = params[i]
         processed = False
-        for o in range(len(p)): # options
-            for k, v in p[o].items():  # key-value pairs in options
+        for o in range(len(pool)):  # options
+            for k, v in pool[o].items():  # key-value pairs in options
                 if type(v) == list:
                     for new_v in np.arange(v[0], v[1], v[2]):
                         # create a copy of the param structure
-                        new_p = copy.deepcopy(p)
+                        new_p = copy.deepcopy(pool)
                         new_p[o][k] = new_v
                         params.append(new_p)
 
                     # done processing this key-value pair
                     processed = True
-                    params.remove(p)
+                    params.remove(pool)
 
                 # do not process other key-value pairs
                 if processed:
@@ -72,35 +87,20 @@ def main(scenario_file_name):
         if not processed:
             i += 1
 
-    # training the model with all variations of hyper params
-    winning_params = None
-    winning_reward = -sys.float_info.max
-    algo = None
-    for p in params:
-        model = model_class(p[0])
-        algo = algo_class(env, model, p[1])
+    # single set of params: normal training mode
+    if len(params) == 1:
+        pool = params[0]
+        model = model_class(pool[0])
+        algo = algo_class(env, model, pool[1])
 
-        if len(params) == 1:
-            avg_reward_random = np.mean(algo.play(scenario['num_play_episodes'], True))
-            avg_reward = np.mean(algo.play(scenario['num_play_episodes']))
-            log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
+        avg_reward_random = np.mean(algo.play(scenario['num_play_episodes'], True))
+        avg_reward = np.mean(algo.play(scenario['num_play_episodes']))
+        log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
 
-        # algo.random(scenario['num_episodes'])
         rewards = algo.train(num_episodes, prints_per_run, scenario['num_play_episodes'])
-        avg_reward = np.mean(rewards)
-        if len(params) > 1:
-            log(f'{avg_reward:.3f}, {p}')
-        else:
-            plot(rewards, 'train', algo)
+        plot(rewards, 'train', algo)
 
-        if avg_reward > winning_reward:
-            winning_reward = avg_reward
-            winning_params = p
-
-    # play back if not in the hyper params optimization mode
-    if len(params) > 1:
-        log(f'Winner: {winning_reward:.3f}, {winning_params}')
-    else:
+        # play back
         rewards_random = algo.play(scenario['num_play_episodes'], True)
         rewards = algo.play(scenario['num_play_episodes'])
 
@@ -110,6 +110,34 @@ def main(scenario_file_name):
         avg_reward_random = np.mean(rewards_random)
         avg_reward = np.mean(rewards)
         log(f'Avg reward: Random: {avg_reward_random}. Trained: {avg_reward}')
+
+    # list of params: hyper params search mode
+    # training the model with all variations of hyper params
+    else:
+        # create a list of training params
+        training_params = []
+        for par in params:
+            training_params.append((par,
+                                    model_class, algo_class, env,
+                                    num_episodes, prints_per_run, scenario['num_play_episodes']))
+
+        # create a pool of workers and run the training
+        pool = multiprocessing.Pool(processes=8)
+        training_results = pool.map(_job, training_params)
+        pool.close()
+
+        # choosing the best result
+        winning_params = None
+        winning_reward = -sys.float_info.max
+        for par, rewards in training_results:
+            avg_reward = np.mean(rewards)
+            log(f'{avg_reward:.3f}, {par}')
+
+            if avg_reward > winning_reward:
+                winning_reward = avg_reward
+                winning_params = par
+
+        log(f'Winner: {winning_reward:.3f}, {winning_params}')
 
 
 def find_class(dir_name, class_name):
@@ -133,18 +161,23 @@ def plot(data, prefix, algo):
     plot_data_average = data_array.cumsum() / (np.arange(data_array.size) + 1)
 
     cumsum = np.cumsum(np.insert(data_array, 0, 0))
-    N = int((data_array.size + 1) * 10 / (W * DPI)) # one data point per 10 pixels
+    N = int((data_array.size + 1) * 10 / (W * DPI))  # one data point per 10 pixels
+    N = 1 if N == 0 else N
     plot_data_moving_average = (cumsum[N:] - cumsum[:-N]) / float(N)
 
     plt.plot(plot_data_moving_average)
     plt.plot(plot_data_average)
 
-    filename = f'log/' \
-               f'{prefix}_' \
+    directory = 'log'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    filename = f'{directory}/' \
                f'{algo.env.spec.id}_' \
                f'{algo.__class__.__name__}_' \
                f'{algo.model.__class__.__name__}_' \
-               f'{datetime.now().strftime("%Y%m%d-%H%M%S")}.png'
+               f'{datetime.now().strftime("%Y%m%d-%H%M%S")}_' \
+               f'{prefix}' \
+               f'.png'
     plt.savefig(filename)
     plt.close()
 

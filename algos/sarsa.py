@@ -4,7 +4,7 @@ import numpy as np
 from algos.base import BaseAlgo
 
 
-class Q_LEARN_BATCH(BaseAlgo):
+class SARSA(BaseAlgo):
     def __init__(self, env, model, algo_options):
         super().__init__(env, model, algo_options)
 
@@ -32,9 +32,7 @@ class Q_LEARN_BATCH(BaseAlgo):
         for episode in range(num_episodes):
             state = self.env.reset()
 
-            # run the episode to the end
-            episode_reward = 0
-            episode_data = []
+            episode_reward = 0  # record episode reward
             done = False
             while not done:
                 state_count[state] += 1
@@ -44,32 +42,23 @@ class Q_LEARN_BATCH(BaseAlgo):
                 new_state, reward, done, _ = self.env.step(action)
                 episode_reward += reward
 
-                episode_data.append((state, action, reward, expected_values))
+                # get discounted future value
+                new_action, new_expected_values = self.get_action(new_state)
+
+                q = expected_values[action]
+                q_next = (1 - self.alpha) * q + self.alpha * (reward + self.gamma * new_expected_values[new_action])
+
+                v_next = np.copy(expected_values)
+                v_next[action] = q_next
+
+                self.model.fit([state], [v_next])
+
                 state = new_state
 
             rewards.append(episode_reward)
 
-            # compute new expected values
-            G = 0   # discounted expected value
-            train_x = []
-            train_y = []
-            for (s, a, r, v) in reversed(episode_data):
-                G = r + self.gamma * G
-
-                q = v[a]
-                q_next = (1 - self.alpha) * q + self.alpha * G
-
-                v_next = np.copy(v)
-                v_next[a] = q_next
-
-                train_x.append(s)
-                train_y.append(v_next)
-
-            # train the model with the new expected values
-            self.model.fit(train_x, train_y)
-
             if episode % print_frequency == 0 and episode != 0:
-                print(f'Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}.')
+                print(f'Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}')
                 print(f'Validation avg reward: {np.mean(self.play(num_validation_episodes))}')
 
         return rewards

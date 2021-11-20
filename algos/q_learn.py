@@ -20,20 +20,9 @@ class Q_LEARN(BaseAlgo):
     def get_action(self, state, env=None, eps=0.0):
         return self.get_action_epsilon_greedy(state, env, eps)
 
-    # def random(self, episodes):
-    #     for episode in range(episodes):
-    #         done = False
-    #         state = self.env.reset()
-    #         while not done:
-    #             action, prob = self.get_action(state, self.env, 1)
-    #             state, reward, done, _ = self.env.step(action)
-    #             if reward > 0:
-    #                 print(f'-------{episode}')
-    #                 # self.env.render()
-
     def train(self, num_episodes, prints_per_run, num_validation_episodes):
-        '''train the model
-            num_episodes - number of training iterations '''
+        """train the model
+            num_episodes - number of training iterations """
 
         print_frequency = int(num_episodes / prints_per_run)
 
@@ -54,11 +43,10 @@ class Q_LEARN(BaseAlgo):
                 episode_reward += reward
 
                 # get discounted future value
-                _, new_prob = self.get_action(new_state)
-                G = reward + self.gamma * np.max(new_prob)
+                _, new_expected_values = self.get_action(new_state)
 
                 q = expected_values[action]
-                q_next = q + self.alpha * (G - q)
+                q_next = (1 - self.alpha) * q + self.alpha * (reward + self.gamma * np.max(new_expected_values))
 
                 v_next = np.copy(expected_values)
                 v_next[action] = q_next
@@ -68,11 +56,9 @@ class Q_LEARN(BaseAlgo):
                 state = new_state
 
             rewards.append(episode_reward)
-            # if episode_reward > 0:
-            #     print(f'======{episode}')
 
             if episode % print_frequency == 0 and episode != 0:
-                print(f"Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}.")
-                print(f'Validation avg reward: {self.play(num_validation_episodes)}')
+                print(f'Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}')
+                print(f'Validation avg reward: {np.mean(self.play(num_validation_episodes))}')
 
         return rewards
