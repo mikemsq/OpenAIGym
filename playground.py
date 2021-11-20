@@ -17,9 +17,12 @@ def _job(job_params):
     env = job_params[3]
     model = model_class(orig_params[0])
     algo = algo_class(env, model, orig_params[1])
-    args = job_params[4:]
-    training_rewards = algo.train(*args)
-    return orig_params, training_rewards
+    num_episodes = job_params[4]
+    prints_per_run = job_params[5]
+    num_play_episodes = job_params[6]
+    training_rewards = algo.train(num_episodes, prints_per_run, num_play_episodes)
+    validation_rewards = algo.play(num_play_episodes)
+    return orig_params, training_rewards, validation_rewards
 
 
 def main(scenario_file_name):
@@ -60,20 +63,20 @@ def main(scenario_file_name):
     ]
     i = 0
     while i < len(params):
-        pool = params[i]
+        par = params[i]
         processed = False
-        for o in range(len(pool)):  # options
-            for k, v in pool[o].items():  # key-value pairs in options
+        for o in range(len(par)):  # options
+            for k, v in par[o].items():  # key-value pairs in options
                 if type(v) == list:
                     for new_v in np.arange(v[0], v[1], v[2]):
                         # create a copy of the param structure
-                        new_p = copy.deepcopy(pool)
+                        new_p = copy.deepcopy(par)
                         new_p[o][k] = new_v
                         params.append(new_p)
 
                     # done processing this key-value pair
                     processed = True
-                    params.remove(pool)
+                    params.remove(par)
 
                 # do not process other key-value pairs
                 if processed:
@@ -127,17 +130,11 @@ def main(scenario_file_name):
         pool.close()
 
         # choosing the best result
-        winning_params = None
-        winning_reward = -sys.float_info.max
-        for par, rewards in training_results:
-            avg_reward = np.mean(rewards)
-            log(f'{avg_reward:.3f}, {par}')
-
-            if avg_reward > winning_reward:
-                winning_reward = avg_reward
-                winning_params = par
-
-        log(f'Winner: {winning_reward:.3f}, {winning_params}')
+        training_results.sort(key=lambda x: np.mean(x[2]), reverse=True)
+        log(f'Winners:')
+        for i in range(10):
+            res = training_results[i]
+            log(f'{i+1}. {np.mean(res[2]):.3f}, {res[0]}')
 
 
 def find_class(dir_name, class_name):
