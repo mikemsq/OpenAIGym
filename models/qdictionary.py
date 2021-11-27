@@ -10,12 +10,7 @@ class QDictionary(BaseModel):
         self.observation_space = model_options['observation_space']
         self.action_size = model_options['action_size']
 
-        self.model = self._create()
-
-    def _create(self):
-        # create a Q dictionary
-        model = defaultdict(lambda: np.zeros(self.action_size))
-        return model
+        self.model = defaultdict(lambda: np.zeros(self.action_size))
 
     def predict(self, state):
         return np.copy(self.model[state])

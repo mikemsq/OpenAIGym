@@ -39,7 +39,6 @@ def main(scenario_file_name):
     # set the env
     env = gym.make(scenario['env'])  # env to import
     env.seed(1)
-    env.reset()  # reset env
 
     # read options from the config
     env_shape = {
@@ -67,8 +66,8 @@ def main(scenario_file_name):
         processed = False
         for o in range(len(par)):  # options
             for k, v in par[o].items():  # key-value pairs in options
-                if type(v) == list:
-                    for new_v in np.arange(v[0], v[1], v[2]):
+                if type(v) == list and v[0] == 'range':
+                    for new_v in np.arange(v[1], v[2], v[3]):
                         # create a copy of the param structure
                         new_p = copy.deepcopy(par)
                         new_p[o][k] = new_v

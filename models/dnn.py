@@ -7,12 +7,14 @@ from tensorflow.keras import layers
 from models.base import BaseModel
 
 
-class NN_24_12_softmax(BaseModel):
+class DNN(BaseModel):
     def __init__(self, model_options):
         super().__init__()
         self.state_shape = model_options['state_shape']
         self.action_size = model_options['action_size']
         self.learning_rate = float(model_options['learning_rate'])
+        self.layers = model_options['layers']
+        self.activations = model_options['activations']
 
         self.model = self._create()
 
@@ -23,9 +25,10 @@ class NN_24_12_softmax(BaseModel):
         # input shape is of observations
         # output shape is according to the number of action
         # The softmax function outputs a probability distribution over the actions
-        model.add(layers.Dense(24, input_shape=self.state_shape, activation="relu"))
-        model.add(layers.Dense(12, activation="relu"))
-        model.add(layers.Dense(self.action_size, activation="softmax"))
+        model.add(layers.Dense(self.layers[0], input_shape=self.state_shape, activation=self.activations[0]))
+        for i in range(1, len(self.layers)):
+            model.add(layers.Dense(self.layers[i], activation=self.activations[i]))
+        model.add(layers.Dense(self.action_size, activation=self.activations[-1]))
 
         model.compile(loss="categorical_crossentropy",
                       optimizer=Adam(learning_rate=self.learning_rate))

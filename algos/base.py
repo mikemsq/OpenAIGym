@@ -10,7 +10,7 @@ class BaseAlgo:
         self.random_seed = algo_options.get('random_seed', 1)
 
     def hot_encode_actions(self, actions):
-        '''encoding the actions into a binary list'''
+        """encoding the actions into a binary list"""
 
         encoded_actions = np.zeros((len(actions), self.model.action_size), np.float32)
         for i in range(self.model.action_size):
@@ -22,7 +22,7 @@ class BaseAlgo:
         raise NotImplementedError
 
     def get_action_epsilon_greedy(self, state, env=None, eps=0.0):
-        '''samples the next action based on the policy probability distribution of the actions'''
+        """samples the next action based on the policy probability distribution of the actions"""
 
         # get action expected values
         action_expected_values = self.model.predict(state)
@@ -59,11 +59,5 @@ class BaseAlgo:
                 # env.render()
 
             rewards.append(episode_reward)
-
-            # if is_random:
-            #     title = 'Random cycle'
-            # else:
-            #     title = 'Playback cycle'
-            # print(f"{title} {episode}. Reward: {reward}")
 
         return rewards

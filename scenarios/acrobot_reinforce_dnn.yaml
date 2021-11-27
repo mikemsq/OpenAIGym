@@ -1,0 +1,16 @@
+env: Acrobot-v1
+num_episodes: 10000
+num_play_episodes: 10
+
+model: DNN
+model_options:
+  layers: [64, 128]
+  activations: ['relu', 'relu', 'softmax']
+  learning_rate: 0.001  # learning rate in deep learning
+
+algo: REINFORCE
+algo_options:
+  gamma: 0.99  # decay rate of past observations
+  alpha: 1e-3  # learning rate in the Q value
+  eps: 1.0
+  eps_decay_factor: 0.9995

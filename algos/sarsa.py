@@ -27,16 +27,23 @@ class SARSA(BaseAlgo):
         print_frequency = int(num_episodes / prints_per_run)
 
         rewards = []
-        state_count = defaultdict(int)
+
+        state_count = None
+        if isinstance(self.env.observation_space, gym.spaces.tuple.Tuple):
+            state_count = defaultdict(int)
 
         for episode in range(num_episodes):
             state = self.env.reset()
 
             episode_reward = 0  # record episode reward
+            eps = self.eps
             done = False
             while not done:
-                state_count[state] += 1
-                eps = self.eps * self.eps_decay_factor ** state_count[state]
+                if state_count is not None:
+                    state_count[state] += 1
+                    eps = self.eps * self.eps_decay_factor ** state_count[state]
+                else:
+                    eps *= self.eps_decay_factor
 
                 action, expected_values = self.get_action(state, self.env, eps)
                 new_state, reward, done, _ = self.env.step(action)

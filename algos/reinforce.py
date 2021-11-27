@@ -1,5 +1,3 @@
-import time
-
 import numpy as np
 
 from algos.base import BaseAlgo
@@ -18,25 +16,29 @@ class REINFORCE(BaseAlgo):
         self.gamma = float(algo_options['gamma'])  # decay rate of past observations
         self.alpha = float(algo_options['alpha'])  # learning rate in the policy gradient
 
+        self.eps = float(algo_options.get('eps', 0))
+        self.eps_decay_factor = float(algo_options.get('eps_decay_factor', 0))
+
     def get_action(self, state, env=None, eps=0.0):
-        '''samples the next action based on the policy probability distribution of the actions'''
+        """samples the next action based on the policy probability distribution of the actions"""
 
         # get action probability
         action_probability_distribution = self.model.predict(state)
-        # norm action probability distribution
-        action_probability_distribution /= np.sum(action_probability_distribution)
 
         # sample action
         if np.random.random() < eps:
             action = env.action_space.sample()
         else:
-            action = np.random.choice(self.model.action_size, 1, p=action_probability_distribution)[0]
+            # norm action probability distribution
+            norm_action_probability_distribution = \
+                action_probability_distribution / np.sum(action_probability_distribution)
+            action = np.random.choice(self.model.action_size, 1, p=norm_action_probability_distribution)[0]
 
         return action, action_probability_distribution
 
     def get_discounted_rewards(self, rewards):
-        '''Use gamma to calculate the total reward discounting for rewards
-        Following - \gamma ^ t * Gt'''
+        """Use gamma to calculate the total reward discounting for rewards
+        Following - gamma ^ t * Gt"""
 
         discounted_rewards = []
         cumulative_total_return = 0
@@ -54,9 +56,9 @@ class REINFORCE(BaseAlgo):
         return norm_discounted_rewards
 
     def update_policy(self, states, actions, probs, rewards):
-        '''Updates the policy network using the NN model.
+        """Updates the policy network using the NN model.
         This function is used after the MC sampling is done - following
-        \delta \theta = \alpha * gradient + log pi'''
+        delta theta = alpha * gradient + log pi"""
 
         # get X
         states = np.vstack(states)
@@ -75,55 +77,63 @@ class REINFORCE(BaseAlgo):
         return history
 
     def train(self, num_episodes, prints_per_run, num_validation_episodes):
-        '''train the model
-            num_episodes - number of training iterations '''
+        """train the model
+            num_episodes - number of training iterations """
+
+        # import time
 
         print_frequency = int(num_episodes / prints_per_run)
 
-        rewards = np.zeros(num_episodes)
+        rewards = []
+
+        eps = self.eps
 
         for episode in range(num_episodes):
             # each episode is a new game env
             state = self.env.reset()
-            done = False
-            episode_reward = 0  # record episode reward
-            t0 = time.time()
 
-            states, actions, probs, rewards = [], [], [], []
-            t_action = 0.0
-            t_step = 0.0
-            t_store = 0.0
+            # adjust the epsilon for the continuous observation space
+            eps *= self.eps_decay_factor
+
+            # t0 = time.time()
+
+            states, actions, probs, episode_rewards = [], [], [], []
+            # t_action = 0.0
+            # t_step = 0.0
+            # t_store = 0.0
+            done = False
             while not done:
                 # play an action and record the game state & reward per episode
-                t = time.time()
-                action, prob = self.get_action(state)
-                t_action += time.time() - t
+                # t = time.time()
+                action, prob = self.get_action(state, self.env, eps)
+                # t_action += time.time() - t
 
-                t = time.time()
+                # t = time.time()
                 next_state, reward, done, _ = self.env.step(action)
-                t_step += time.time() - t
+                # t_step += time.time() - t
 
-                t = time.time()
+                # t = time.time()
                 states.append(state)
                 actions.append(action)
                 probs.append(prob)
-                rewards.append(reward)
+                episode_rewards.append(reward)
 
                 state = next_state
-                episode_reward += reward
-                t_store += time.time() - t
+                # episode_reward += reward
+                # t_store += time.time() - t
 
-            t1 = time.time()
-            history = self.update_policy(states, actions, probs, rewards)
-            rewards[episode] = episode_reward
+            # t1 = time.time()
+            history = self.update_policy(states, actions, probs, episode_rewards)
+            rewards.append(np.sum(episode_rewards))
 
-            t2 = time.time()
+            # t2 = time.time()
             if episode % print_frequency == 0 and episode != 0:
-                print(f"Training cycle {episode}. Reward: {episode_reward:3.0f}. Loss: {history: .3f} "
-                      f"({(t2 - t0):.3f} sec"
+                print(f"Training cycle {episode}. Reward: {np.sum(episode_rewards):3.0f}. Loss: {history: .3f} "
+                      # f"({(t2 - t0):.3f} sec"
                       # f", {t_action:.3f} sec, {t_step:.3f} sec, {t_store:.3f} sec, {(t2 - t1):.3f} sec"
-                      f")"
+                      # f")"
                       )
-                print(f'Validation avg reward: {self.play(num_validation_episodes)}')
+                print(f'Validation avg reward: {np.mean(self.play(num_validation_episodes))}')
+                print(f'Epsilon: {eps}')
 
         return rewards

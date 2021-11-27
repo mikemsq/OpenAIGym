@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+import gym
 import numpy as np
 from algos.base import BaseAlgo
 
@@ -27,18 +28,30 @@ class Q_LEARN_BATCH(BaseAlgo):
         print_frequency = int(num_episodes / prints_per_run)
 
         rewards = []
-        state_count = defaultdict(int)
+
+        # for the discrete observation space we use state count to adjust the epsilon
+        state_count = None
+        if isinstance(self.env.observation_space, gym.spaces.tuple.Tuple):
+            state_count = defaultdict(int)
+
+        eps = self.eps
 
         for episode in range(num_episodes):
             state = self.env.reset()
+
+            # adjust the epsilon for the continuous observation space
+            if state_count is None:
+                eps *= self.eps_decay_factor
 
             # run the episode to the end
             episode_reward = 0
             episode_data = []
             done = False
             while not done:
-                state_count[state] += 1
-                eps = self.eps * self.eps_decay_factor ** state_count[state]
+                # adjust the epsilon for the discrete observation space
+                if state_count is not None:
+                    state_count[state] += 1
+                    eps = self.eps * self.eps_decay_factor ** state_count[state]
 
                 action, expected_values = self.get_action(state, self.env, eps)
                 new_state, reward, done, _ = self.env.step(action)
@@ -57,13 +70,13 @@ class Q_LEARN_BATCH(BaseAlgo):
                 G = r + self.gamma * G
 
                 q = v[a]
-                q_next = (1 - self.alpha) * q + self.alpha * G
+                updated_q = (1 - self.alpha) * q + self.alpha * G
 
-                v_next = np.copy(v)
-                v_next[a] = q_next
+                updated_v = np.copy(v)
+                updated_v[a] = updated_q
 
                 train_x.append(s)
-                train_y.append(v_next)
+                train_y.append(updated_v)
 
             # train the model with the new expected values
             self.model.fit(train_x, train_y)
@@ -71,5 +84,7 @@ class Q_LEARN_BATCH(BaseAlgo):
             if episode % print_frequency == 0 and episode != 0:
                 print(f'Training cycle {episode}. Average reward: {np.mean(rewards):1.6f}.')
                 print(f'Validation avg reward: {np.mean(self.play(num_validation_episodes))}')
+                if state_count is None:
+                    print(f'Epsilon: {eps}')
 
         return rewards

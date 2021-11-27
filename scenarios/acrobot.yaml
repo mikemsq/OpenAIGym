@@ -1,11 +1,10 @@
-env: CartPole-v1
+env: Acrobot-v1
 num_episodes: 1000
-num_play_episodes: 50
+num_play_episodes: 10
 
-model: DNN
+model: NN_24_12_softmax
+#model: NN_128_64_32_softmax
 model_options:
-  layers: [24, 12]
-  activations: ['relu', 'relu', 'softmax']
   learning_rate: 0.01  # learning rate in deep learning
 
 algo: REINFORCE
